@@ -96,7 +96,8 @@
   }
 
   .row { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  @media (max-width: 480px) { .row { grid-template-columns: minmax(0, 1fr); } }
+  .row.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 560px) { .row, .row.three { grid-template-columns: minmax(0, 1fr); } }
 
   .field { display: grid; gap: 6px; }
   label, .label {
@@ -225,21 +226,25 @@
 
       <div class="dictee" id="dictee-box" hidden>
         <span class="label"><svg class="mic"><use href="#mic"/></svg>Tout dicter d'un coup</span>
-        <textarea id="dictee" placeholder="Ex. : « Séance du 28 septembre. On a parlé de ses difficultés à dormir et de la dispute avec sa sœur. Pour la semaine prochaine, il remplit l'agenda du sommeil et fait deux exercices de respiration par jour. »"></textarea>
+        <textarea id="dictee" placeholder="Ex. : « Séance du 28 septembre avec Julie Dupont. On a parlé de ses difficultés à dormir et de la dispute avec sa sœur. Pour la semaine prochaine, il remplit l'agenda du sommeil et fait deux exercices de respiration par jour. »"></textarea>
         <div class="actions">
           <button type="button" class="primary" id="repartir">Répartir dans les champs</button>
-          <span class="note">Claude range votre dictée dans la date, les thèmes et les devoirs.</span>
+          <span class="note">Claude range votre dictée dans le nom, la date, les thèmes et les devoirs.</span>
         </div>
       </div>
 
-      <div class="row">
+      <div class="row three">
+        <div class="field">
+          <label for="nom">Nom</label>
+          <input type="text" id="nom" maxlength="80" placeholder="Ex. : Dupont" autocapitalize="characters">
+        </div>
+        <div class="field">
+          <label for="prenom">Prénom</label>
+          <input type="text" id="prenom" maxlength="80" placeholder="Ex. : Julie" autocapitalize="words">
+        </div>
         <div class="field">
           <label for="date">Date de la séance</label>
           <input type="date" id="date" required>
-        </div>
-        <div class="field">
-          <label for="code">Code patient <span class="opt">(facultatif)</span></label>
-          <input type="text" id="code" maxlength="40" placeholder="Ex. : P-014">
         </div>
       </div>
 
@@ -269,7 +274,7 @@
         <button type="button" class="link" id="reset">Nouvelle séance</button>
       </div>
       <p class="status" id="status" role="status" aria-live="polite"></p>
-      <p class="note">Pour protéger vos patients, utilisez un code plutôt que leur nom.</p>
+      <p class="note">Cette page et les séances enregistrées ne sont visibles que par vous.</p>
     </form>
 
     <aside class="panel" aria-labelledby="h-hist">
@@ -278,8 +283,8 @@
         <span class="chip" id="count">0</span>
       </div>
       <div class="field">
-        <label for="filtre">Filtrer par code patient</label>
-        <input type="search" id="filtre" placeholder="Ex. : P-014">
+        <label for="filtre">Rechercher un patient</label>
+        <input type="search" id="filtre" placeholder="Nom ou prénom">
       </div>
       <ul class="list" id="list"></ul>
       <p class="empty" id="empty">Chargement…</p>
@@ -291,7 +296,7 @@
 <script>
 (function () {
   var $ = function (s) { return document.querySelector(s); };
-  var f = { date: $('#date'), code: $('#code'), themes: $('#themes'), devoirs: $('#devoirs') };
+  var f = { nom: $('#nom'), prenom: $('#prenom'), date: $('#date'), themes: $('#themes'), devoirs: $('#devoirs') };
   var DRAFT_KEY = 'notes-seance-brouillon';
 
   var col = null;           // collection "seances" (db)
@@ -310,6 +315,9 @@
     var p = iso.split('-').map(Number);
     return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   }
+  function fullName(d) {
+    return [d.prenom, d.nom ? String(d.nom).toUpperCase() : ''].filter(Boolean).join(' ');
+  }
   function say(msg, kind) {
     var s = $('#status');
     s.textContent = msg || '';
@@ -318,7 +326,8 @@
   function values() {
     return {
       date: f.date.value,
-      code: f.code.value.trim(),
+      nom: f.nom.value.trim(),
+      prenom: f.prenom.value.trim(),
       themes: f.themes.value.trim(),
       devoirs: f.devoirs.value.trim()
     };
@@ -347,7 +356,8 @@
       if (!raw) return false;
       var d = JSON.parse(raw);
       f.date.value = d.date || todayISO();
-      f.code.value = d.code || '';
+      f.nom.value = d.nom || '';
+      f.prenom.value = d.prenom || '';
       f.themes.value = d.themes || '';
       f.devoirs.value = d.devoirs || '';
       $('#dictee').value = d.dictee || '';
@@ -361,7 +371,8 @@
   /* ---------- Texte du compte-rendu ---------- */
   function asText(v) {
     var lines = ['COMPTE-RENDU DE SÉANCE', '', 'Date : ' + frDate(v.date)];
-    if (v.code) lines.push('Patient : ' + v.code);
+    var patient = fullName(v);
+    if (patient) lines.push('Patient : ' + patient);
     lines.push('', 'THÈMES ABORDÉS', v.themes || '(rien noté)', '', 'DEVOIRS DONNÉS AU PATIENT', v.devoirs || '(aucun)');
     return lines.join('\n') + '\n';
   }
@@ -375,7 +386,7 @@
   function resetForm() {
     currentId = null; currentCreated = null;
     f.date.value = todayISO();
-    f.code.value = ''; f.themes.value = ''; f.devoirs.value = '';
+    f.nom.value = ''; f.prenom.value = ''; f.themes.value = ''; f.devoirs.value = '';
     $('#dictee').value = '';
     clearDraft(); setMode(); render();
     say('Formulaire vidé. Prêt pour une nouvelle séance.');
@@ -384,7 +395,8 @@
     var d = s.data || {};
     currentId = s.id; currentCreated = d.createdAt || null;
     f.date.value = d.date || '';
-    f.code.value = d.code || '';
+    f.nom.value = d.nom || '';
+    f.prenom.value = d.prenom || '';
     f.themes.value = d.themes || '';
     f.devoirs.value = d.devoirs || '';
     setMode(); saveDraft(); render();
@@ -402,7 +414,7 @@
     if (!check(v)) return;
     saving = true; $('#save').disabled = true; say('Enregistrement…');
     var now = new Date().toISOString();
-    var body = { date: v.date, code: v.code, themes: v.themes, devoirs: v.devoirs, createdAt: currentCreated || now, updatedAt: now };
+    var body = { date: v.date, nom: v.nom, prenom: v.prenom, themes: v.themes, devoirs: v.devoirs, createdAt: currentCreated || now, updatedAt: now };
     try {
       if (currentId) {
         await col.doc(currentId).set(body);
@@ -446,13 +458,18 @@
   function render() {
     var list = $('#list');
     var q = $('#filtre').value.trim().toLowerCase();
-    var shown = seances.filter(function (s) { return !q || (s.data.code || '').toLowerCase().indexOf(q) !== -1; });
+    var shown = seances.filter(function (s) {
+      if (!q) return true;
+      var d = s.data;
+      return [(d.prenom || '') + ' ' + (d.nom || ''), (d.nom || '') + ' ' + (d.prenom || '')]
+        .some(function (n) { return n.toLowerCase().indexOf(q) !== -1; });
+    });
     $('#count').textContent = String(seances.length);
     list.textContent = '';
     var empty = $('#empty');
     if (!col) return;
     if (!seances.length) { empty.hidden = false; empty.textContent = 'Aucune séance enregistrée pour l\'instant. Remplissez le formulaire puis cliquez sur « Enregistrer ».'; return; }
-    if (!shown.length) { empty.hidden = false; empty.textContent = 'Aucune séance pour ce code.'; return; }
+    if (!shown.length) { empty.hidden = false; empty.textContent = 'Aucune séance pour ce patient.'; return; }
     empty.hidden = true;
 
     shown.forEach(function (s) {
@@ -463,7 +480,8 @@
       var top = document.createElement('div'); top.className = 'item-top';
       var date = document.createElement('span'); date.className = 'item-date'; date.textContent = frDate(d.date);
       top.appendChild(date);
-      if (d.code) { var c = document.createElement('span'); c.className = 'chip'; c.textContent = d.code; top.appendChild(c); }
+      var who = fullName(d);
+      if (who) { var c = document.createElement('span'); c.className = 'chip'; c.textContent = who; top.appendChild(c); }
       li.appendChild(top);
 
       var first = (d.themes || '').split('\n').map(function (l) { return l.replace(/^[-•*\s]+/, ''); }).filter(Boolean)[0];
@@ -542,7 +560,9 @@
     btn.addEventListener('click', async function () {
       var v = values();
       if (!check(v)) return;
-      var name = 'seance-' + v.date + (v.code ? '-' + v.code.replace(/[^\w-]+/g, '') : '') + '.txt';
+      var who = [v.nom, v.prenom].filter(Boolean).join('-')
+        .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w-]+/g, '-');
+      var name = 'seance-' + v.date + (who ? '-' + who : '') + '.txt';
       try {
         await dl.save({ filename: name, data: asText(v) });
         say('Fichier enregistré.', 'ok');
@@ -568,15 +588,19 @@
         'Tu aides un psychologue TCC à rédiger le compte-rendu d\'une séance. ' +
         'Voici sa dictée brute (transcription vocale, peut contenir des fautes) :\n"""\n' + raw + '\n"""\n\n' +
         'Date du jour : ' + todayISO() + '.\n' +
-        'Extrais trois informations, sans rien inventer ni ajouter :\n' +
-        '1. "date" : la date de la séance au format AAAA-MM-JJ si elle est mentionnée (« aujourd\'hui », « hier » compris), sinon null.\n' +
-        '2. "themes" : les thèmes abordés en séance, en courtes phrases claires en français.\n' +
-        '3. "devoirs" : les devoirs ou exercices donnés au patient pour la suite, en courtes phrases.\n' +
+        'Extrais ces informations, sans rien inventer ni ajouter :\n' +
+        '1. "nom" et "prenom" : le nom de famille et le prénom du patient s\'ils sont dits, sinon null.\n' +
+        '2. "date" : la date de la séance au format AAAA-MM-JJ si elle est mentionnée (« aujourd\'hui », « hier » compris), sinon null.\n' +
+        '3. "themes" : les thèmes abordés en séance, en courtes phrases claires en français.\n' +
+        '4. "devoirs" : les devoirs ou exercices donnés au patient pour la suite, en courtes phrases.\n' +
         'Corrige seulement les fautes évidentes de transcription. ' +
-        'Réponds uniquement avec ce JSON : {"date": "AAAA-MM-JJ" ou null, "themes": ["..."], "devoirs": ["..."]}';
+        'Réponds uniquement avec ce JSON : {"nom": "..." ou null, "prenom": "..." ou null, "date": "AAAA-MM-JJ" ou null, "themes": ["..."], "devoirs": ["..."]}';
       try {
         var r = await sample.json(prompt, { modelTier: 'quick' });
         var added = [];
+        // Le nom n'écrase jamais un nom déjà saisi à la main.
+        if (r && typeof r.nom === 'string' && r.nom.trim() && !f.nom.value.trim()) { f.nom.value = r.nom.trim(); added.push('le nom'); }
+        if (r && typeof r.prenom === 'string' && r.prenom.trim() && !f.prenom.value.trim()) { f.prenom.value = r.prenom.trim(); added.push('le prénom'); }
         if (r && typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date)) { f.date.value = r.date; added.push('la date'); }
         function fill(el, arr, label) {
           if (!Array.isArray(arr)) return;
