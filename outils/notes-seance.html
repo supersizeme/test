@@ -1,0 +1,606 @@
+<title>Notes de séance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  :root {
+    --bg: #F2F6F5;
+    --surface: #FFFFFF;
+    --ink: #15302E;
+    --muted: #5A716F;
+    --line: #D6E1DF;
+    --accent: #0F766E;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #DDEFEC;
+    --danger: #B42318;
+    --danger-soft: #FDECEA;
+    --ok: #1B7A45;
+    --focus: #0F766E;
+    --serif: "Newsreader", Georgia, "Times New Roman", serif;
+    --sans: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0D1716;
+      --surface: #142220;
+      --ink: #E3EEEC;
+      --muted: #93AAA7;
+      --line: #25403C;
+      --accent: #3CBFB0;
+      --accent-ink: #062320;
+      --accent-soft: #173F3A;
+      --danger: #F2877D;
+      --danger-soft: #3A1D1A;
+      --ok: #6FD39B;
+      --focus: #3CBFB0;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0D1716;
+    --surface: #142220;
+    --ink: #E3EEEC;
+    --muted: #93AAA7;
+    --line: #25403C;
+    --accent: #3CBFB0;
+    --accent-ink: #062320;
+    --accent-soft: #173F3A;
+    --danger: #F2877D;
+    --danger-soft: #3A1D1A;
+    --ok: #6FD39B;
+    --focus: #3CBFB0;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.55 var(--sans);
+    padding-inline: 16px;
+    padding-block: 28px 48px;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 24px; }
+
+  header { display: grid; gap: 4px; }
+  h1 {
+    font: 600 2.1rem/1.1 var(--serif);
+    margin: 0;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+  .sub { margin: 0; color: var(--muted); max-width: 60ch; }
+
+  .layout { display: grid; gap: 24px; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); align-items: start; }
+  @media (max-width: 820px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+    display: grid;
+    gap: 18px;
+  }
+  h2 { font: 600 1.25rem/1.2 var(--serif); margin: 0; }
+  .panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .mode {
+    font: 500 0.72rem/1 var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 6px 8px;
+    border-radius: 4px;
+  }
+
+  .row { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 480px) { .row { grid-template-columns: minmax(0, 1fr); } }
+
+  .field { display: grid; gap: 6px; }
+  label, .label {
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .opt { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--muted); font-size: 0.85rem; }
+  input, textarea {
+    font: inherit;
+    color: var(--ink);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px 12px;
+    width: 100%;
+  }
+  input[type="date"] { font-family: var(--mono); font-size: 0.95rem; }
+  textarea { min-height: 128px; resize: vertical; line-height: 1.5; }
+  input:focus-visible, textarea:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .hint { font-size: 0.82rem; color: var(--muted); margin: 0; }
+
+  .mic { width: 14px; height: 14px; flex: none; }
+
+  .dictee {
+    border: 1px dashed var(--accent);
+    background: var(--accent-soft);
+    border-radius: 8px;
+    padding: 14px;
+    display: grid;
+    gap: 10px;
+  }
+  .dictee textarea { background: var(--surface); min-height: 96px; }
+  .dictee .label { color: var(--accent); }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  button {
+    font: 600 0.92rem/1 var(--sans);
+    border-radius: 6px;
+    padding: 11px 16px;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.primary:hover { filter: brightness(1.07); }
+  button:disabled { opacity: 0.55; cursor: wait; }
+  button.link { border: 0; background: none; padding: 6px 4px; color: var(--muted); font-weight: 500; }
+  button.link:hover { color: var(--ink); }
+  button.danger { color: var(--danger); }
+  button.danger-solid { background: var(--danger); border-color: var(--danger); color: var(--surface); }
+
+  .status { min-height: 1.4em; font-size: 0.9rem; margin: 0; color: var(--muted); }
+  .status.ok { color: var(--ok); }
+  .status.err { color: var(--danger); }
+
+  /* Historique */
+  .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 70vh; overflow-y: auto; }
+  .item {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px;
+    display: grid;
+    gap: 6px;
+    background: var(--surface);
+  }
+  .item.active { border-color: var(--accent); background: var(--accent-soft); }
+  .item-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .item-date { font: 500 0.85rem/1.3 var(--mono); font-variant-numeric: tabular-nums; }
+  .chip {
+    font: 500 0.75rem/1 var(--mono);
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 4px 6px;
+    border-radius: 4px;
+  }
+  .item-text { margin: 0; font-size: 0.9rem; color: var(--muted); overflow-wrap: anywhere; }
+  .item-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .item-actions .confirm { font-size: 0.85rem; color: var(--danger); }
+  .empty { color: var(--muted); font-size: 0.92rem; margin: 0; }
+
+  details.aide { font-size: 0.9rem; }
+  details.aide summary { cursor: pointer; font-weight: 600; color: var(--accent); }
+  details.aide ul { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+  kbd {
+    font: 500 0.8rem/1 var(--mono);
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 2px 5px;
+    background: var(--bg);
+  }
+  .note { font-size: 0.82rem; color: var(--muted); margin: 0; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    button, .item { transition: border-color .15s, background-color .15s, filter .15s; }
+  }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="mic" viewBox="0 0 24 24"><path fill="currentColor" d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 1 0-7 0v6A3.5 3.5 0 0 0 12 15Zm6-3.5a1 1 0 1 0-2 0 4 4 0 0 1-8 0 1 1 0 1 0-2 0 6 6 0 0 0 5 5.91V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.59A6 6 0 0 0 18 11.5Z"/></symbol>
+</svg>
+
+<div class="wrap">
+  <header>
+    <h1>Notes de séance</h1>
+    <p class="sub">Compte-rendu rapide après chaque consultation. Écrivez ou dictez, puis enregistrez.</p>
+  </header>
+
+  <div class="layout">
+    <form class="panel" id="form" autocomplete="off" novalidate>
+      <div class="panel-head">
+        <h2>Compte-rendu</h2>
+        <span class="mode" id="mode">Nouvelle séance</span>
+      </div>
+
+      <div class="dictee" id="dictee-box" hidden>
+        <span class="label"><svg class="mic"><use href="#mic"/></svg>Tout dicter d'un coup</span>
+        <textarea id="dictee" placeholder="Ex. : « Séance du 28 septembre. On a parlé de ses difficultés à dormir et de la dispute avec sa sœur. Pour la semaine prochaine, il remplit l'agenda du sommeil et fait deux exercices de respiration par jour. »"></textarea>
+        <div class="actions">
+          <button type="button" class="primary" id="repartir">Répartir dans les champs</button>
+          <span class="note">Claude range votre dictée dans la date, les thèmes et les devoirs.</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="date">Date de la séance</label>
+          <input type="date" id="date" required>
+        </div>
+        <div class="field">
+          <label for="code">Code patient <span class="opt">(facultatif)</span></label>
+          <input type="text" id="code" maxlength="40" placeholder="Ex. : P-014">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="themes">Thèmes abordés <svg class="mic" aria-hidden="true"><use href="#mic"/></svg></label>
+        <textarea id="themes" placeholder="Ex. :&#10;- Difficultés d'endormissement depuis 3 semaines&#10;- Conflit avec sa sœur : pensées « je suis toujours rejeté »&#10;- Psychoéducation sur le cercle vicieux de l'anxiété"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="devoirs">Devoirs donnés au patient <svg class="mic" aria-hidden="true"><use href="#mic"/></svg></label>
+        <textarea id="devoirs" placeholder="Ex. :&#10;- Remplir l'agenda du sommeil chaque matin&#10;- 2 exercices de respiration par jour&#10;- Noter 3 situations avec les colonnes de Beck"></textarea>
+      </div>
+
+      <details class="aide">
+        <summary>Comment dicter au lieu d'écrire ?</summary>
+        <ul>
+          <li><strong>Téléphone :</strong> touchez le champ, puis le micro du clavier.</li>
+          <li><strong>Windows :</strong> cliquez dans le champ, puis <kbd>Windows</kbd> + <kbd>H</kbd>.</li>
+          <li><strong>Mac :</strong> cliquez dans le champ, puis appuyez deux fois sur <kbd>Fn</kbd> (ou <kbd>🌐</kbd>).</li>
+        </ul>
+      </details>
+
+      <div class="actions">
+        <button type="submit" class="primary" id="save">Enregistrer</button>
+        <button type="button" id="copy">Copier le texte</button>
+        <button type="button" id="download" hidden>Télécharger (.txt)</button>
+        <button type="button" class="link" id="reset">Nouvelle séance</button>
+      </div>
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+      <p class="note">Pour protéger vos patients, utilisez un code plutôt que leur nom.</p>
+    </form>
+
+    <aside class="panel" aria-labelledby="h-hist">
+      <div class="panel-head">
+        <h2 id="h-hist">Séances enregistrées</h2>
+        <span class="chip" id="count">0</span>
+      </div>
+      <div class="field">
+        <label for="filtre">Filtrer par code patient</label>
+        <input type="search" id="filtre" placeholder="Ex. : P-014">
+      </div>
+      <ul class="list" id="list"></ul>
+      <p class="empty" id="empty">Chargement…</p>
+      <p class="note">Visible par vous seul.</p>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  var f = { date: $('#date'), code: $('#code'), themes: $('#themes'), devoirs: $('#devoirs') };
+  var DRAFT_KEY = 'notes-seance-brouillon';
+
+  var col = null;           // collection "seances" (db)
+  var currentId = null;     // séance en cours d'édition
+  var currentCreated = null;
+  var seances = [];
+  var pendingDelete = null;
+  var saving = false;
+
+  function todayISO() {
+    var d = new Date();
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  }
+  function frDate(iso) {
+    if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso || '';
+    var p = iso.split('-').map(Number);
+    return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  function say(msg, kind) {
+    var s = $('#status');
+    s.textContent = msg || '';
+    s.className = 'status' + (kind ? ' ' + kind : '');
+  }
+  function values() {
+    return {
+      date: f.date.value,
+      code: f.code.value.trim(),
+      themes: f.themes.value.trim(),
+      devoirs: f.devoirs.value.trim()
+    };
+  }
+  function setMode() {
+    $('#mode').textContent = currentId ? 'Modification' : 'Nouvelle séance';
+  }
+
+  /* ---------- Brouillon local (confort) ---------- */
+  var draftTimer = null;
+  function saveDraft() {
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(function () {
+      try {
+        var v = values();
+        v.dictee = $('#dictee').value;
+        v.currentId = currentId;
+        v.currentCreated = currentCreated;
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(v));
+      } catch (e) {}
+    }, 400);
+  }
+  function loadDraft() {
+    try {
+      var raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return false;
+      var d = JSON.parse(raw);
+      f.date.value = d.date || todayISO();
+      f.code.value = d.code || '';
+      f.themes.value = d.themes || '';
+      f.devoirs.value = d.devoirs || '';
+      $('#dictee').value = d.dictee || '';
+      currentId = d.currentId || null;
+      currentCreated = d.currentCreated || null;
+      return true;
+    } catch (e) { return false; }
+  }
+  function clearDraft() { try { localStorage.removeItem(DRAFT_KEY); } catch (e) {} }
+
+  /* ---------- Texte du compte-rendu ---------- */
+  function asText(v) {
+    var lines = ['COMPTE-RENDU DE SÉANCE', '', 'Date : ' + frDate(v.date)];
+    if (v.code) lines.push('Patient : ' + v.code);
+    lines.push('', 'THÈMES ABORDÉS', v.themes || '(rien noté)', '', 'DEVOIRS DONNÉS AU PATIENT', v.devoirs || '(aucun)');
+    return lines.join('\n') + '\n';
+  }
+  function check(v) {
+    if (!v.date) { say('Indiquez la date de la séance.', 'err'); f.date.focus(); return false; }
+    if (!v.themes && !v.devoirs) { say('Ajoutez au moins un thème ou un devoir.', 'err'); f.themes.focus(); return false; }
+    return true;
+  }
+
+  /* ---------- Formulaire ---------- */
+  function resetForm() {
+    currentId = null; currentCreated = null;
+    f.date.value = todayISO();
+    f.code.value = ''; f.themes.value = ''; f.devoirs.value = '';
+    $('#dictee').value = '';
+    clearDraft(); setMode(); render();
+    say('Formulaire vidé. Prêt pour une nouvelle séance.');
+  }
+  function loadSeance(s) {
+    var d = s.data || {};
+    currentId = s.id; currentCreated = d.createdAt || null;
+    f.date.value = d.date || '';
+    f.code.value = d.code || '';
+    f.themes.value = d.themes || '';
+    f.devoirs.value = d.devoirs || '';
+    setMode(); saveDraft(); render();
+    say('Séance du ' + frDate(d.date) + ' ouverte. Modifiez puis enregistrez.');
+    if (window.matchMedia('(max-width: 820px)').matches) $('#form').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  $('#form').addEventListener('input', saveDraft);
+  $('#reset').addEventListener('click', resetForm);
+
+  $('#form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    if (!col || saving) return;
+    var v = values();
+    if (!check(v)) return;
+    saving = true; $('#save').disabled = true; say('Enregistrement…');
+    var now = new Date().toISOString();
+    var body = { date: v.date, code: v.code, themes: v.themes, devoirs: v.devoirs, createdAt: currentCreated || now, updatedAt: now };
+    try {
+      if (currentId) {
+        await col.doc(currentId).set(body);
+      } else {
+        var ref = await col.add(body);
+        currentId = ref.id;
+        currentCreated = body.createdAt;
+      }
+      setMode(); saveDraft();
+      say('Séance du ' + frDate(v.date) + ' enregistrée.', 'ok');
+    } catch (err) {
+      if (err && err.code === 'quota_exceeded') say('Stockage plein : supprimez d\'anciennes séances puis réessayez.', 'err');
+      else if (err && err.code === 'invalid_argument') say('Vous n\'avez pas le droit d\'enregistrer ici. Utilisez « Copier le texte ».', 'err');
+      else say('Enregistrement impossible pour le moment. Réessayez dans un instant.', 'err');
+    } finally {
+      saving = false; $('#save').disabled = false;
+    }
+  });
+
+  $('#copy').addEventListener('click', function () {
+    var v = values();
+    if (!check(v)) return;
+    var txt = asText(v);
+    try {
+      navigator.clipboard.writeText(txt).then(function () {
+        say('Texte copié. Collez-le où vous voulez (Word, email…).', 'ok');
+      }, function () { fallbackCopy(txt); });
+    } catch (e) { fallbackCopy(txt); }
+  });
+  function fallbackCopy(txt) {
+    var t = document.createElement('textarea');
+    t.value = txt; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0';
+    document.body.appendChild(t); t.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(t);
+    say(ok ? 'Texte copié.' : 'Copie refusée par le navigateur. Sélectionnez le texte à la main.', ok ? 'ok' : 'err');
+  }
+
+  /* ---------- Historique ---------- */
+  function render() {
+    var list = $('#list');
+    var q = $('#filtre').value.trim().toLowerCase();
+    var shown = seances.filter(function (s) { return !q || (s.data.code || '').toLowerCase().indexOf(q) !== -1; });
+    $('#count').textContent = String(seances.length);
+    list.textContent = '';
+    var empty = $('#empty');
+    if (!col) return;
+    if (!seances.length) { empty.hidden = false; empty.textContent = 'Aucune séance enregistrée pour l\'instant. Remplissez le formulaire puis cliquez sur « Enregistrer ».'; return; }
+    if (!shown.length) { empty.hidden = false; empty.textContent = 'Aucune séance pour ce code.'; return; }
+    empty.hidden = true;
+
+    shown.forEach(function (s) {
+      var d = s.data;
+      var li = document.createElement('li');
+      li.className = 'item' + (s.id === currentId ? ' active' : '');
+
+      var top = document.createElement('div'); top.className = 'item-top';
+      var date = document.createElement('span'); date.className = 'item-date'; date.textContent = frDate(d.date);
+      top.appendChild(date);
+      if (d.code) { var c = document.createElement('span'); c.className = 'chip'; c.textContent = d.code; top.appendChild(c); }
+      li.appendChild(top);
+
+      var first = (d.themes || '').split('\n').map(function (l) { return l.replace(/^[-•*\s]+/, ''); }).filter(Boolean)[0];
+      var p = document.createElement('p'); p.className = 'item-text';
+      var nbDev = (d.devoirs || '').split('\n').filter(function (l) { return l.trim(); }).length;
+      p.textContent = (first || 'Sans thème noté') + (nbDev ? ' · ' + nbDev + ' devoir' + (nbDev > 1 ? 's' : '') : '');
+      li.appendChild(p);
+
+      var acts = document.createElement('div'); acts.className = 'item-actions';
+      if (pendingDelete === s.id) {
+        var lab = document.createElement('span'); lab.className = 'confirm'; lab.textContent = 'Supprimer définitivement ?';
+        var yes = document.createElement('button'); yes.type = 'button'; yes.className = 'danger-solid'; yes.textContent = 'Oui, supprimer';
+        yes.addEventListener('click', function () { removeSeance(s.id); });
+        var no = document.createElement('button'); no.type = 'button'; no.className = 'link'; no.textContent = 'Annuler';
+        no.addEventListener('click', function () { pendingDelete = null; render(); });
+        acts.append(lab, yes, no);
+      } else {
+        var open = document.createElement('button'); open.type = 'button'; open.textContent = 'Ouvrir';
+        open.setAttribute('aria-label', 'Ouvrir la séance du ' + frDate(d.date));
+        open.addEventListener('click', function () { loadSeance(s); });
+        var del = document.createElement('button'); del.type = 'button'; del.className = 'link danger'; del.textContent = 'Supprimer';
+        del.addEventListener('click', function () { pendingDelete = s.id; render(); });
+        acts.append(open, del);
+      }
+      li.appendChild(acts);
+      list.appendChild(li);
+    });
+  }
+  async function removeSeance(id) {
+    try {
+      await col.doc(id).delete();
+      if (id === currentId) { currentId = null; currentCreated = null; setMode(); saveDraft(); }
+      pendingDelete = null;
+      say('Séance supprimée.', 'ok');
+    } catch (e) {
+      say('Suppression impossible pour le moment.', 'err');
+    }
+    render();
+  }
+  $('#filtre').addEventListener('input', render);
+
+  /* ---------- Démarrage ---------- */
+  if (!loadDraft()) f.date.value = todayISO();
+  setMode();
+  render();
+
+  var claude = window.claude;
+  if (!claude || typeof claude.use !== 'function') {
+    $('#save').hidden = true;
+    $('#empty').textContent = 'L\'historique n\'est disponible que sur claude.ai. Utilisez « Copier le texte ».';
+    return;
+  }
+
+  // Stockage des séances
+  claude.use('db').then(function (db) {
+    if (!db) {
+      $('#save').hidden = true;
+      $('#empty').textContent = 'L\'historique n\'est pas disponible ici. Utilisez « Copier le texte ».';
+      return;
+    }
+    col = db.collection('seances');
+    col.orderBy('date', 'desc').limit(1000).onSnapshot(function (snap) {
+      seances = snap.docs.map(function (doc) { return { id: doc.id, data: doc.data() || {} }; });
+      render();
+    }, function () {
+      $('#empty').hidden = false;
+      $('#empty').textContent = 'L\'historique ne peut pas être chargé. Rechargez la page.';
+    });
+  });
+
+  // Téléchargement .txt
+  claude.use('downloads').then(function (dl) {
+    if (!dl) return;
+    var btn = $('#download');
+    btn.hidden = false;
+    btn.addEventListener('click', async function () {
+      var v = values();
+      if (!check(v)) return;
+      var name = 'seance-' + v.date + (v.code ? '-' + v.code.replace(/[^\w-]+/g, '') : '') + '.txt';
+      try {
+        await dl.save({ filename: name, data: asText(v) });
+        say('Fichier enregistré.', 'ok');
+      } catch (e) {
+        if (e && e.code === 'declined') say('Téléchargement annulé.');
+        else if (e && e.code === 'rate_limited') say('Patientez un instant puis réessayez.', 'err');
+        else { btn.hidden = true; say('Le téléchargement n\'est pas disponible ici. Utilisez « Copier le texte ».', 'err'); }
+      }
+    });
+  });
+
+  // Dictée libre rangée par Claude
+  claude.use('sample').then(function (sample) {
+    if (!sample || typeof sample.json !== 'function') return;
+    var box = $('#dictee-box');
+    box.hidden = false;
+    var btn = $('#repartir');
+    btn.addEventListener('click', async function () {
+      var raw = $('#dictee').value.trim();
+      if (!raw) { say('Dictez ou écrivez d\'abord le résumé de la séance dans le cadre « Tout dicter d\'un coup ».', 'err'); $('#dictee').focus(); return; }
+      btn.disabled = true; say('Claude range votre dictée…');
+      var prompt =
+        'Tu aides un psychologue TCC à rédiger le compte-rendu d\'une séance. ' +
+        'Voici sa dictée brute (transcription vocale, peut contenir des fautes) :\n"""\n' + raw + '\n"""\n\n' +
+        'Date du jour : ' + todayISO() + '.\n' +
+        'Extrais trois informations, sans rien inventer ni ajouter :\n' +
+        '1. "date" : la date de la séance au format AAAA-MM-JJ si elle est mentionnée (« aujourd\'hui », « hier » compris), sinon null.\n' +
+        '2. "themes" : les thèmes abordés en séance, en courtes phrases claires en français.\n' +
+        '3. "devoirs" : les devoirs ou exercices donnés au patient pour la suite, en courtes phrases.\n' +
+        'Corrige seulement les fautes évidentes de transcription. ' +
+        'Réponds uniquement avec ce JSON : {"date": "AAAA-MM-JJ" ou null, "themes": ["..."], "devoirs": ["..."]}';
+      try {
+        var r = await sample.json(prompt, { modelTier: 'quick' });
+        var added = [];
+        if (r && typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date)) { f.date.value = r.date; added.push('la date'); }
+        function fill(el, arr, label) {
+          if (!Array.isArray(arr)) return;
+          var items = arr.filter(function (x) { return typeof x === 'string' && x.trim(); }).map(function (x) { return '- ' + x.trim(); });
+          if (!items.length) return;
+          el.value = (el.value.trim() ? el.value.trim() + '\n' : '') + items.join('\n');
+          added.push(label);
+        }
+        fill(f.themes, r && r.themes, 'les thèmes');
+        fill(f.devoirs, r && r.devoirs, 'les devoirs');
+        saveDraft();
+        say(added.length ? 'Champs remplis : ' + added.join(', ') + '. Relisez puis enregistrez.' : 'Claude n\'a rien trouvé à ranger. Complétez les champs à la main.', added.length ? 'ok' : '');
+      } catch (e) {
+        var c = e && e.code;
+        if (c === 'not_granted' || c === 'sampling_disabled' || c === 'not_declared' || c === 'capability_disabled' || c === 'capability_removed') {
+          box.hidden = true; say('Le rangement automatique n\'est pas autorisé. Dictez directement dans chaque champ.');
+        } else if (c === 'rate_limited') say('Trop de demandes. Réessayez dans quelques minutes.', 'err');
+        else if (c === 'session_expired') say('Reconnectez-vous à claude.ai puis réessayez.', 'err');
+        else if (c === 'cancelled') say('');
+        else say('Le rangement a échoué. Réessayez, ou remplissez les champs à la main.', 'err');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+})();
+</script>
