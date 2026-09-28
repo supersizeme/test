@@ -134,6 +134,13 @@
   .item-actions .confirm { font-size: 0.85rem; color: var(--danger); }
   .empty { color: var(--muted); font-size: 0.92rem; margin: 0; }
 
+  .dictee {
+    border: 1px dashed var(--accent); background: var(--accent-soft);
+    border-radius: 8px; padding: 14px; display: grid; gap: 10px;
+  }
+  .dictee textarea { background: var(--surface); min-height: 110px; }
+  .dictee label { color: var(--accent); }
+
   .backup { border-top: 1px solid var(--line); padding-top: 16px; display: grid; gap: 10px; }
   .backup h3 { margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; }
 
@@ -161,6 +168,28 @@
       <div class="panel-head">
         <h2>Compte-rendu</h2>
         <span class="mode" id="mode">Nouvelle séance</span>
+      </div>
+
+      <div class="dictee">
+        <div class="field-head">
+          <label for="dictee">Tout dicter d'un coup</label>
+          <button type="button" class="mic-btn" data-target="dictee" hidden><svg aria-hidden="true"><use href="#mic"/></svg><span>Dicter</span></button>
+        </div>
+        <textarea id="dictee" placeholder="Ex. : « Patiente Julie Dupont. Séance du 28 septembre. On a parlé de ses difficultés à dormir. Ensuite du conflit avec sa sœur. Devoirs : remplir l'agenda du sommeil. Ensuite faire deux exercices de respiration par jour. »"></textarea>
+        <div class="actions">
+          <button type="button" class="primary" id="repartir">Répartir dans les champs</button>
+          <button type="button" class="link" id="dictee-clear">Effacer</button>
+        </div>
+        <details class="aide">
+          <summary>Les mots-repères à dire</summary>
+          <ul>
+            <li><strong>Le nom :</strong> « patient », « patiente », « résident » ou « résidente », suivi du <em>prénom puis du nom</em>. Ou bien « prénom Julie, nom Dupont ».</li>
+            <li><strong>La date :</strong> « séance du 28 septembre », « séance d'aujourd'hui » ou « séance d'hier ». Sans date, c'est aujourd'hui.</li>
+            <li><strong>Les thèmes :</strong> « thèmes », « on a parlé de », « on a abordé » ou « on a travaillé sur ».</li>
+            <li><strong>Les devoirs :</strong> « devoirs », « pour la prochaine séance » ou « pour la semaine prochaine ».</li>
+            <li><strong>Pour séparer les points :</strong> « ensuite », « puis », « à la ligne », ou un point.</li>
+          </ul>
+        </details>
       </div>
 
       <div class="row">
@@ -325,6 +354,7 @@
     draftTimer = setTimeout(function () {
       try {
         var v = values();
+        v.dictee = $('#dictee').value;
         v.currentId = currentId;
         localStorage.setItem(DRAFT_KEY, JSON.stringify(v));
       } catch (e) {}
@@ -340,6 +370,7 @@
       f.prenom.value = d.prenom || '';
       f.themes.value = d.themes || '';
       f.devoirs.value = d.devoirs || '';
+      $('#dictee').value = d.dictee || '';
       currentId = d.currentId || null;
       return true;
     } catch (e) { return false; }
@@ -366,6 +397,7 @@
     currentId = null;
     f.date.value = todayISO();
     f.nom.value = ''; f.prenom.value = ''; f.themes.value = ''; f.devoirs.value = '';
+    $('#dictee').value = '';
     clearDraft(); setMode(); render();
     say('Formulaire vidé. Prêt pour une nouvelle séance.');
   }
@@ -614,6 +646,207 @@
       });
     });
   }
+
+  /* ---------- Répartition de la dictée (sans internet) ---------- */
+  /* PARSER START */
+  var LETTER = 'A-Za-zÀ-ÖØ-öø-ÿ';
+  var MONTHS = { janvier: 1, fevrier: 2, 'février': 2, mars: 3, avril: 4, mai: 5, juin: 6, juillet: 7,
+    aout: 8, 'août': 8, septembre: 9, octobre: 10, novembre: 11, decembre: 12, 'décembre': 12 };
+  // Mots qui ne peuvent pas faire partie d'un nom : ils arrêtent la lecture du nom.
+  var STOP = ('il elle ils elles on nous je doit doivent va vont a ont est sont était se s sa son ses ne n pas '
+    + 'qui que qu et ou pour avec de du des d le la les l un une au aux en dans sur par aujourd hui hier '
+    + 'séance seance date thème thèmes theme themes devoir devoirs ensuite puis alors donc vient semble pense dit '
+    + 'se sent a été était avait').split(' ');
+
+  function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+  function capName(s) {
+    return s.toLowerCase().replace(new RegExp('(^|[\\s\'’-])([' + LETTER + '])', 'g'), function (m, a, b) { return a + b.toUpperCase(); });
+  }
+  function isoOf(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function findDate(text, today) {
+    var m = text.match(/(?:s[ée]ance|date)\s+(?:d['’]\s*|de\s+|du\s+|:\s*)?(aujourd['’]\s*hui|avant[\s-]hier|hier)/i);
+    if (m) {
+      var d = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      var w = m[1].toLowerCase();
+      if (w.indexOf('avant') === 0) d.setDate(d.getDate() - 2);
+      else if (w === 'hier') d.setDate(d.getDate() - 1);
+      return { iso: isoOf(d), index: m.index, length: m[0].length };
+    }
+    var re = new RegExp('(?:(?:la\\s+)?(?:s[ée]ance|date)\\s+(?:du\\s+|de\\s+|:\\s*)?(?:ce\\s+)?(?:le\\s+)?)?'
+      + '(?:(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\\s+)?'
+      + '(\\d{1,2}|1er|premier)\\s+(janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre)'
+      + '(?:\\s+(\\d{4}))?', 'i');
+    m = text.match(re);
+    if (!m) {
+      m = text.match(/(?:s[ée]ance|date)\s+(?:du\s+|:\s*)?(?:le\s+)?(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?/i);
+      if (!m) return null;
+      m = [m[0], m[1], String(Number(m[2])), m[3]];
+      m.index = text.search(/(?:s[ée]ance|date)\s+(?:du\s+|:\s*)?(?:le\s+)?\d{1,2}[\/.-]\d{1,2}/i);
+    }
+    var day = /^\d+$/.test(m[1]) ? Number(m[1]) : 1;
+    var month = /^\d+$/.test(m[2]) ? Number(m[2]) : MONTHS[m[2].toLowerCase()];
+    var year = m[3] ? Number(m[3].length === 2 ? '20' + m[3] : m[3]) : today.getFullYear();
+    if (!month || month > 12 || day < 1 || day > 31) return null;
+    var dt = new Date(year, month - 1, day);
+    // Sans année dite : une date plus d'un mois dans le futur appartient à l'année passée.
+    if (!m[3] && dt - today > 31 * 864e5) dt.setFullYear(year - 1);
+    return { iso: isoOf(dt), index: m.index, length: m[0].length };
+  }
+
+  var MARKERS = [
+    { type: 'name', re: '(?:le\\s+|la\\s+)?(?:patiente?|r[ée]sidente?|monsieur|madame|mademoiselle)(?:\\s+s[\'’]appelle|\\s+est)?' },
+    { type: 'prenom', re: '(?:son\\s+)?pr[ée]nom(?:\\s+est|\\s*:)?' },
+    { type: 'nom', re: '(?:son\\s+)?nom(?:\\s+de\\s+famille)?(?:\\s+est|\\s*:)?' },
+    { type: 'themes', re: '(?:les\\s+)?th[èe]mes?(?:\\s+abord[ée]s?)?(?:\\s+sont)?|(?:on\\s+a|nous\\s+avons)\\s+(?:parl[ée]|discut[ée]|abord[ée]|travaill[ée]\\s+sur|vu)|sujets?\\s+abord[ée]s?' },
+    { type: 'devoirs', re: '(?:les\\s+|comme\\s+|en\\s+)?devoirs?(?:\\s+donn[ée]s?)?(?:\\s+(?:pour\\s+la\\s+prochaine\\s+(?:fois|s[ée]ance)|pour\\s+la\\s+semaine\\s+prochaine))?|t[âa]ches?\\s+(?:[àa]\\s+domicile|[àa]\\s+faire)|exercices?\\s+[àa]\\s+faire|(?:pour|d[\'’]ici)\\s+la\\s+(?:prochaine\\s+(?:fois|s[ée]ance)|semaine\\s+prochaine)' }
+  ];
+
+  function findMarkers(text) {
+    var found = [];
+    MARKERS.forEach(function (mk) {
+      var re = new RegExp('(^|[\\s,.;:!?])(' + mk.re + ')(?=$|[^' + LETTER + '])', 'gi');
+      var m;
+      while ((m = re.exec(text))) {
+        var start = m.index + m[1].length;
+        var before = text.slice(Math.max(0, start - 12), start).toLowerCase();
+        // « il va devoir… » est un verbe, pas les devoirs.
+        if (mk.type === 'devoirs' && /(?:va|vais|vas|vont|doit|pourra|faudra)\s+$/.test(before) && /^devoir\b/i.test(m[2])) continue;
+        found.push({ type: mk.type, start: start, end: start + m[2].length, word: m[2] });
+        if (m[0].length === 0) re.lastIndex++;
+      }
+    });
+    found.sort(function (a, b) { return a.start - b.start || b.end - a.end; });
+    var out = [], lastEnd = -1;
+    found.forEach(function (f) { if (f.start >= lastEnd) { out.push(f); lastEnd = f.end; } });
+    return out;
+  }
+
+  // Lit jusqu'à `max` mots de nom au début du texte ; renvoie les mots et la suite.
+  function takeName(seg, max) {
+    var rest = seg.replace(/^[\s,:;-]+/, '');
+    var words = [];
+    var re = new RegExp('^([' + LETTER + '][' + LETTER + '\'’-]*)([\\s,.;:!?]*)');
+    while (words.length < max) {
+      var m = rest.match(re);
+      if (!m) break;
+      var w = m[1];
+      var low = w.toLowerCase().replace(/['’].*$/, '');
+      if (STOP.indexOf(low) !== -1 || STOP.indexOf(w.toLowerCase()) !== -1) break;
+      words.push(w);
+      rest = rest.slice(m[0].length);
+      if (/[,.;:!?]/.test(m[2])) break;
+    }
+    return { words: words, rest: rest };
+  }
+
+  function splitItems(seg, type) {
+    var parts = seg.split(/[\n.;!?]+|\s(?:et\s+)?(?:ensuite|puis|également|egalement|premièrement|deuxièmement|troisièmement|d['’]abord|enfin|et aussi)(?=[\s,:]|$)/i);
+    var items = [];
+    parts.forEach(function (p) {
+      var s = (p || '').trim();
+      var prev;
+      do {
+        prev = s;
+        s = s.replace(/^[\s,:\-–—]+/, '')
+          .replace(/^(?:et|alors|donc|euh|bon|ensuite|puis|aussi)(?=\s|,)\s*,?\s*/i, '')
+          .replace(/^(?:de\s+|d['’]\s*|du\s+|des\s+|que\s+|qu['’]\s*|sur\s+)/i, '');
+        if (type === 'devoirs') {
+          s = s.replace(/^(?:il|elle|le\s+patient|la\s+patiente|le\s+r[ée]sident|la\s+r[ée]sidente)\s+(?:doit|devra|va|devrait|a\s+[àa])\s+/i, '')
+            .replace(/^(?:il\s+faut\s+qu['’]\s*(?:il|elle)|il\s+faudra)\s+/i, '');
+        }
+      } while (s !== prev);
+      s = s.replace(/[\s,:\-–—]+$/, '').replace(/\s+(?:avec|et|de|pour|chez)$/i, '');
+      // Un petit mot resté seul (ex. « avec » devant « monsieur Durand ») n'est pas un point.
+      if (/^(?:avec|et|de|du|des|le|la|les|pour|chez|un|une|alors|donc|euh)$/i.test(s)) return;
+      if (s.length >= 2) items.push(cap(s));
+    });
+    return items;
+  }
+
+  function parseDictee(raw, today) {
+    var text = raw.replace(/\s*(?:à la ligne|a la ligne|nouvelle ligne)\s*/gi, '\n');
+    var out = { nom: '', prenom: '', date: null, themes: [], devoirs: [], reperes: 0 };
+
+    var d = findDate(text, today);
+    if (d) {
+      out.date = d.iso;
+      text = text.slice(0, d.index) + '. ' + text.slice(d.index + d.length);
+    }
+
+    var markers = findMarkers(text);
+    var current = 'themes';
+    var nameDone = false;
+    var pos = 0;
+    function push(seg, type) {
+      var items = splitItems(seg, type);
+      out[type] = out[type].concat(items);
+    }
+    for (var i = 0; i <= markers.length; i++) {
+      var mk = markers[i - 1];
+      var end = i < markers.length ? markers[i].start : text.length;
+      var seg = text.slice(pos, end);
+      if (!mk || mk.type === 'themes' || mk.type === 'devoirs') {
+        if (mk) { current = mk.type; out.reperes++; }
+        push(seg, current);
+      } else {
+        var isCivil = /monsieur|madame|mademoiselle/i.test(mk.word);
+        var t = takeName(seg, mk.type === 'name' ? 3 : 2);
+        if (!t.words.length || (mk.type === 'name' && nameDone)) {
+          // Pas un nom (ex. « la patiente doit… ») : on garde le texte tel quel.
+          push(mk.word + seg, current);
+        } else {
+          out.reperes++;
+          var name = t.words.map(capName);
+          if (mk.type === 'prenom') out.prenom = name.join(' ');
+          else if (mk.type === 'nom') out.nom = name.join(' ');
+          else if (name.length === 1) { if (isCivil) out.nom = name[0]; else out.prenom = name[0]; }
+          else { out.prenom = name[0]; out.nom = name.slice(1).join(' '); }
+          if (mk.type === 'name') nameDone = true;
+          push(t.rest, current);
+        }
+      }
+      if (i < markers.length) pos = markers[i].end;
+    }
+    return out;
+  }
+  /* PARSER END */
+
+  function joinItems(field, items) {
+    if (!items.length) return;
+    var lines = items.map(function (x) { return '- ' + x; }).join('\n');
+    field.value = (field.value.trim() ? field.value.trim() + '\n' : '') + lines;
+  }
+
+  $('#repartir').addEventListener('click', function () {
+    stopMic();
+    var raw = $('#dictee').value.trim();
+    if (!raw) { say('Dictez ou écrivez d\'abord la séance dans le cadre « Tout dicter d\'un coup ».', 'err'); $('#dictee').focus(); return; }
+    var r = parseDictee(raw, new Date());
+    var filled = [];
+    // Un nom déjà tapé à la main n'est jamais remplacé.
+    if (r.prenom && !f.prenom.value.trim()) { f.prenom.value = r.prenom; filled.push('le prénom'); }
+    if (r.nom && !f.nom.value.trim()) { f.nom.value = r.nom; filled.push('le nom'); }
+    if (r.date) { f.date.value = r.date; filled.push('la date'); }
+    joinItems(f.themes, r.themes);
+    joinItems(f.devoirs, r.devoirs);
+    if (r.themes.length) filled.push(r.themes.length + ' thème' + (r.themes.length > 1 ? 's' : ''));
+    if (r.devoirs.length) filled.push(r.devoirs.length + ' devoir' + (r.devoirs.length > 1 ? 's' : ''));
+    $('#dictee').value = '';
+    saveDraft();
+    if (!filled.length) { say('Rien à répartir. Vérifiez le texte dicté.', 'err'); return; }
+    var msg = 'Rempli : ' + filled.join(', ') + '. Relisez puis enregistrez.';
+    if (!r.reperes) msg += ' Aucun mot-repère entendu : tout est allé dans les thèmes. Dites « devoirs » avant les devoirs.';
+    say(msg, 'ok');
+  });
+  $('#dictee-clear').addEventListener('click', function () {
+    stopMic();
+    $('#dictee').value = '';
+    saveDraft();
+    $('#dictee').focus();
+  });
 
   /* ---------- Démarrage ---------- */
   loadHistory();
